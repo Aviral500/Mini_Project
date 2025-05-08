@@ -3,12 +3,18 @@ import ffmpeg
 import random
 import string
 import openai
-
+from transformers import pipeline
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 from werkzeug.utils import secure_filename
 import speech_recognition as sr
 import PyPDF2
 from collections import Counter
+import nltk
+from nltk.corpus import stopwords
+
+# Download stopwords from nltk
+nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
 
 app = Flask(__name__)
 app.secret_key = 'secret123'
@@ -76,33 +82,43 @@ def extract_text_from_file(filepath):
     else:
         return "Unsupported file type."
 
-# Updated summary generation function using OpenAI API
 def generate_summary(text):
     try:
-        # Using OpenAI to generate a more advanced summary
-        response = openai.Completion.create(
-            engine="text-davinci-003",  # You can choose another model if needed
-            prompt=f"Summarize the following text:\n\n{text}",
-            max_tokens=150,  # Adjust this to get the desired length of the summary
-            temperature=0.5  # Adjust for creativity in summary generation
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes text."},
+                {"role": "user", "content": f"Summarize the following text:\n\n{text}"}
+            ],
+            max_tokens=300,
+            temperature=0.5
         )
-        summary = response.choices[0].text.strip()
+        summary = response.choices[0].message["content"].strip()
         return summary
     except Exception as e:
         return f"Error in generating summary: {str(e)}"
 
 def get_keyword_frequency(text):
     words = [word.strip(string.punctuation).lower() for word in text.split()]
-    return dict(Counter(words))
+    filtered_words = [word for word in words if word and word not in stop_words]
+    return dict(Counter(filtered_words))
 
 def calculate_nlp_score(text, keywords):
-    total_words = len(text.split())
-    keyword_hits = sum([text.lower().count(k) for k in keywords])
+    filtered_words = [word.strip(string.punctuation).lower() for word in text.split()
+                      if word.lower() not in stop_words]
+    total_words = len(filtered_words)
+    keyword_hits = sum([filtered_words.count(k) for k in keywords])
     score = int((keyword_hits / total_words) * 100) if total_words > 0 else 0
-    return score
+    return min(score, 100)
 
-def generate_confidence_score():
-    return random.randint(70, 99)
+def generate_confidence_score(text):
+    length = len(text.split())
+    if length < 50:
+        return random.randint(60, 75)
+    elif length < 200:
+        return random.randint(75, 85)
+    else:
+        return random.randint(85, 95)
 
 @app.route('/')
 def home():
@@ -168,10 +184,10 @@ def upload_page():
             file.save(filepath)
 
             extracted_text = extract_text_from_file(filepath)
-            summary = generate_summary(extracted_text)  # Now using OpenAI for summarization
+            summary = generate_summary(extracted_text)
             keyword_freq = get_keyword_frequency(extracted_text)
             nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
-            confidence = generate_confidence_score()
+            confidence = generate_confidence_score(extracted_text)
 
             return render_template(
                 'results.html',
@@ -193,10 +209,10 @@ def upload_page():
 def results(filename):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     extracted_text = extract_text_from_file(filepath)
-    summary = generate_summary(extracted_text)  # Now using OpenAI for summarization
+    summary = generate_summary(extracted_text)
     keyword_freq = get_keyword_frequency(extracted_text)
     nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
-    confidence = generate_confidence_score()
+    confidence = generate_confidence_score(extracted_text)
 
     return render_template(
         'results.html',
@@ -210,5 +226,3 @@ def results(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-print(os.getenv("OPENAI_API_KEY"))
