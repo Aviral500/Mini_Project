@@ -50,16 +50,12 @@
     <div class="result-section">
         <h2>🔍 Highlighted Keywords:</h2>
         <p>
-            {% for word in text.split() %}
-                {% set cleaned = word.strip('.,?!()[]{}"\'') %}
-                {% if cleaned.lower() in keywords %}
-                    <span class="highlight">{{ word }}</span>
-                {% else %}
-                    {{ word }}
-                {% endif %}
+            {% for word in keywords.keys() %}
+                <span class="highlight">{{ word }}</span>
             {% endfor %}
         </p>
     </div>
+    
 
     <div class="result-section">
         <h2>🔢 Keyword Frequency:</h2>
@@ -78,6 +74,12 @@
     <div class="result-section">
         <h2>🎯 AI Confidence Score:</h2>
         <p>AI's Confidence in Evaluation: <strong>{{ confidence }}%</strong></p>
+    </div>
+
+    <div class="result-section">
+        <h2>📊 Sentiment Analysis:</h2>
+        <p>Sentiment: <strong>{{ sentiment_label }}</strong></p>
+        <p>Sentiment Score: <strong>{{ sentiment_score }}</strong></p>
     </div>
 
     <a href="{{ url_for('upload_page') }}" class="btn">Upload Another File</a>

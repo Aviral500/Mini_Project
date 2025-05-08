@@ -3,7 +3,7 @@ import ffmpeg
 import random
 import string
 import openai
-from transformers import pipeline
+from textblob import TextBlob
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 from werkzeug.utils import secure_filename
 import speech_recognition as sr
@@ -82,26 +82,45 @@ def extract_text_from_file(filepath):
     else:
         return "Unsupported file type."
 
-def generate_summary(text):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that summarizes text."},
-                {"role": "user", "content": f"Summarize the following text:\n\n{text}"}
-            ],
-            max_tokens=300,
-            temperature=0.5
-        )
-        summary = response.choices[0].message["content"].strip()
-        return summary
-    except Exception as e:
-        return f"Error in generating summary: {str(e)}"
+def generate_summary(text, max_sentences=20):
+    sentences = text.split('.')
+    word_freq = {}
 
-def get_keyword_frequency(text):
-    words = [word.strip(string.punctuation).lower() for word in text.split()]
-    filtered_words = [word for word in words if word and word not in stop_words]
-    return dict(Counter(filtered_words))
+    for word in text.lower().split():
+        word = ''.join(char for char in word if char.isalnum())
+        if word:
+            word_freq[word] = word_freq.get(word, 0) + 1
+
+    sentence_scores = []
+    for sentence in sentences:
+        sentence_words = sentence.lower().split()
+        score = sum(word_freq.get(word.strip('.,!?'), 0) for word in sentence_words)
+        sentence_scores.append((sentence.strip(), score))
+
+    sorted_sentences = sorted(sentence_scores, key=lambda x: x[1], reverse=True)
+
+    # Generate a longer summary by selecting more sentences.
+    top_sentences = [s for s, _ in sorted_sentences[:max_sentences]]
+
+    # Return a detailed summary by combining the top sentences.
+    return '. '.join(top_sentences).strip() + '.'
+
+def get_keyword_frequency(text, max_keywords=20):
+    from nltk.tokenize import word_tokenize
+    import string
+
+    tokens = word_tokenize(text.lower())
+    tokens = [word for word in tokens if word.isalpha()]
+
+    filtered = [
+        word for word in tokens
+        if word not in stop_words and len(word) > 2
+    ]
+
+    freq_dist = Counter(filtered)
+    most_common = freq_dist.most_common(max_keywords)
+
+    return dict(most_common)
 
 def calculate_nlp_score(text, keywords):
     filtered_words = [word.strip(string.punctuation).lower() for word in text.split()
@@ -119,6 +138,14 @@ def generate_confidence_score(text):
         return random.randint(75, 85)
     else:
         return random.randint(85, 95)
+
+# Sentiment analysis function using TextBlob
+def get_sentiment(text):
+    blob = TextBlob(text)
+    sentiment_polarity = blob.sentiment.polarity
+    sentiment_label = "Positive" if sentiment_polarity > 0 else "Negative" if sentiment_polarity < 0 else "Neutral"
+    sentiment_score = round(sentiment_polarity, 2)
+    return sentiment_label, sentiment_score
 
 @app.route('/')
 def home():
@@ -184,10 +211,13 @@ def upload_page():
             file.save(filepath)
 
             extracted_text = extract_text_from_file(filepath)
-            summary = generate_summary(extracted_text)
+            summary = generate_summary(extracted_text)  # Longer summary
             keyword_freq = get_keyword_frequency(extracted_text)
             nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
             confidence = generate_confidence_score(extracted_text)
+
+            # Sentiment analysis using TextBlob
+            sentiment_label, sentiment_score = get_sentiment(extracted_text)
 
             return render_template(
                 'results.html',
@@ -196,7 +226,9 @@ def upload_page():
                 summary=summary,
                 keywords=keyword_freq,
                 nlp_score=nlp_score,
-                confidence=confidence
+                confidence=confidence,
+                sentiment_label=sentiment_label,
+                sentiment_score=sentiment_score
             )
 
         else:
@@ -209,10 +241,12 @@ def upload_page():
 def results(filename):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     extracted_text = extract_text_from_file(filepath)
-    summary = generate_summary(extracted_text)
+    summary = generate_summary(extracted_text)  # Longer summary
     keyword_freq = get_keyword_frequency(extracted_text)
     nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
     confidence = generate_confidence_score(extracted_text)
+
+    sentiment_label, sentiment_score = get_sentiment(extracted_text)
 
     return render_template(
         'results.html',
@@ -221,7 +255,9 @@ def results(filename):
         summary=summary,
         keywords=keyword_freq,
         nlp_score=nlp_score,
-        confidence=confidence
+        confidence=confidence,
+        sentiment_label=sentiment_label,
+        sentiment_score=sentiment_score
     )
 
 if __name__ == '__main__':
