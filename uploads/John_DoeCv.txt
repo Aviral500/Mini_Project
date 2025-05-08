@@ -1,0 +1,59 @@
+John Doe
+Email: john.doe@example.com
+Phone: (123) 456-7890
+LinkedIn: linkedin.com/in/johndoe
+GitHub: github.com/johndoe
+
+Objective
+A highly motivated and results-driven software engineer with 5+ years of experience in full-stack development. Passionate about using cutting-edge technologies to create efficient and scalable solutions. Seeking to contribute my skills and expertise to a forward-thinking company.
+
+Skills
+- Programming Languages: Python, JavaScript, Java, C++
+- Web Technologies: HTML5, CSS3, React, Angular, Node.js
+- Databases: MySQL, PostgreSQL, MongoDB
+- Version Control: Git, GitHub, GitLab
+- Frameworks: Flask, Django, Express.js, Spring Boot
+- Tools: Docker, Kubernetes, Jenkins, Jira
+- Soft Skills: Communication, Problem-Solving, Teamwork, Leadership, Time Management
+
+Work Experience
+
+Software Engineer
+ABC Technologies, New York, NY
+March 2020 – Present
+- Developed scalable and high-performance web applications using Flask and React.
+- Led a team of 5 engineers to design and implement an internal tool that reduced deployment time by 40%.
+- Worked closely with product managers to define and prioritize new features and improvements.
+- Integrated third-party APIs and managed cloud infrastructure using AWS.
+
+Junior Developer
+XYZ Solutions, New York, NY
+July 2017 – February 2020
+- Designed and implemented a customer-facing web application using Django and PostgreSQL.
+- Collaborated with cross-functional teams to improve software development lifecycle processes.
+- Wrote unit tests to ensure code quality and reduce bug rates.
+- Participated in daily standups and code reviews as part of Agile development.
+
+Education
+
+Bachelor of Science in Computer Science
+University of California, Berkeley
+Graduated: May 2017
+- Coursework: Data Structures, Algorithms, Database Systems, Web Development
+- GPA: 3.8/4.0
+
+Certifications
+- AWS Certified Solutions Architect – Amazon Web Services, 2021
+- Certified Kubernetes Administrator (CKA) – Cloud Native Computing Foundation, 2020
+
+Projects
+
+Project Management App
+- Developed a project management web application using React, Node.js, and MongoDB to help teams manage their tasks and deadlines.
+
+Real-Time Chat Application
+- Built a real-time chat app using Flask and WebSockets to enable users to send and receive messages in real time.
+
+Languages
+- English (Fluent)
+- Spanish (Intermediate)

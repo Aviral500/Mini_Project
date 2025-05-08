@@ -147,6 +147,9 @@ def get_sentiment(text):
     sentiment_score = round(sentiment_polarity, 2)
     return sentiment_label, sentiment_score
 
+# Define the required skills list
+required_skills = ["Python", "Machine Learning", "SQL", "Communication", "Teamwork"]
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -155,17 +158,25 @@ def home():
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']
+        contact = request.form['contact']
         password = request.form['password']
 
         if username in users:
             flash('Username already exists')
             return redirect(url_for('register'))
 
-        users[username] = password
+        users[username] = {
+            'password': password,
+            'email': email,
+            'contact': contact
+        }
+
         flash('Registration successful! Please login.')
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -173,7 +184,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        if username in users and users[username] == password:
+        if username in users and users[username]['password'] == password:
             session['username'] = username
             return redirect(url_for('upload_page'))
 
@@ -219,6 +230,11 @@ def upload_page():
             # Sentiment analysis using TextBlob
             sentiment_label, sentiment_score = get_sentiment(extracted_text)
 
+            # Skill matching logic
+            text_lower = extracted_text.lower()
+            matched_skills = [skill for skill in required_skills if skill.lower() in text_lower]
+            skill_score = int((len(matched_skills) / len(required_skills)) * 100)
+
             return render_template(
                 'results.html',
                 filename=filename,
@@ -228,7 +244,10 @@ def upload_page():
                 nlp_score=nlp_score,
                 confidence=confidence,
                 sentiment_label=sentiment_label,
-                sentiment_score=sentiment_score
+                sentiment_score=sentiment_score,
+                matched_skills=matched_skills,
+                total_skills=len(required_skills),
+                skill_score=skill_score
             )
 
         else:
@@ -248,6 +267,11 @@ def results(filename):
 
     sentiment_label, sentiment_score = get_sentiment(extracted_text)
 
+    # Skill matching logic
+    text_lower = extracted_text.lower()
+    matched_skills = [skill for skill in required_skills if skill.lower() in text_lower]
+    skill_score = int((len(matched_skills) / len(required_skills)) * 100)
+
     return render_template(
         'results.html',
         filename=filename,
@@ -257,7 +281,10 @@ def results(filename):
         nlp_score=nlp_score,
         confidence=confidence,
         sentiment_label=sentiment_label,
-        sentiment_score=sentiment_score
+        sentiment_score=sentiment_score,
+        matched_skills=matched_skills,
+        total_skills=len(required_skills),
+        skill_score=skill_score
     )
 
 if __name__ == '__main__':

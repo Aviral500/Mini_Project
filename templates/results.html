@@ -55,7 +55,6 @@
             {% endfor %}
         </p>
     </div>
-    
 
     <div class="result-section">
         <h2>🔢 Keyword Frequency:</h2>
@@ -80,6 +79,21 @@
         <h2>📊 Sentiment Analysis:</h2>
         <p>Sentiment: <strong>{{ sentiment_label }}</strong></p>
         <p>Sentiment Score: <strong>{{ sentiment_score }}</strong></p>
+    </div>
+
+    <div class="result-section">
+        <h2>💼 Skill Match Score:</h2>
+        <p>Matching Skills: <strong>{{ skill_score }}%</strong></p>
+        <p><strong>Matched Skills:</strong> 
+            {% if matched_skills %}
+                {% for skill in matched_skills %}
+                    <span class="highlight">{{ skill }}</span>
+                {% endfor %}
+            {% else %}
+                No skills matched.
+            {% endif %}
+        </p>
+        <p>Total Skills to Match: <strong>{{ total_skills }}</strong></p>
     </div>
 
     <a href="{{ url_for('upload_page') }}" class="btn">Upload Another File</a>
