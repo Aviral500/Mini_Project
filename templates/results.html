@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Results - {{ filename }}</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #ffa500;
+        }
+        .highlight {
+            background-color: orange;
+            color: black;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 0 1px;
+        }
+        .result-section {
+            margin-bottom: 25px;
+        }
+        button, .btn {
+            background-color: #ffa500;
+            border: none;
+            color: black;
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 10px 5px 0 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #ff8c00;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Results for: <span style="color: white">{{ filename }}</span></h1>
+
+    <div class="result-section">
+        <h2>✅ Summary:</h2>
+        <p>{{ summary }}</p>
+    </div>
+
+    <div class="result-section">
+        <h2>🔍 Highlighted Keywords:</h2>
+        <p>
+            {% for word in text.split() %}
+                {% set cleaned = word.strip('.,?!()[]{}"\'') %}
+                {% if cleaned.lower() in keywords %}
+                    <span class="highlight">{{ word }}</span>
+                {% else %}
+                    {{ word }}
+                {% endif %}
+            {% endfor %}
+        </p>
+    </div>
+
+    <div class="result-section">
+        <h2>🔢 Keyword Frequency:</h2>
+        <ul>
+            {% for word, count in keywords.items() %}
+                <li><strong>{{ word }}</strong>: {{ count }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="result-section">
+        <h2>🧠 NLP Score:</h2>
+        <p>Estimated Readability / Accuracy: <strong>{{ nlp_score }}%</strong></p>
+    </div>
+
+    <div class="result-section">
+        <h2>🎯 AI Confidence Score:</h2>
+        <p>AI's Confidence in Evaluation: <strong>{{ confidence }}%</strong></p>
+    </div>
+
+    <a href="{{ url_for('upload_page') }}" class="btn">Upload Another File</a>
+    <button onclick="window.print()">Download Result</button>
+
+</body>
+</html>

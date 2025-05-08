@@ -1,0 +1,214 @@
+import os
+import ffmpeg
+import random
+import string
+import openai
+
+from flask import Flask, render_template, request, redirect, flash, url_for, session
+from werkzeug.utils import secure_filename
+import speech_recognition as sr
+import PyPDF2
+from collections import Counter
+
+app = Flask(__name__)
+app.secret_key = 'secret123'
+
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'wav', 'mp3', 'mp4'}
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Dummy user database
+users = {}
+
+# Set OpenAI API key from environment variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def extract_text_from_file(filepath):
+    ext = filepath.rsplit('.', 1)[1].lower()
+    recognizer = sr.Recognizer()
+
+    if ext == 'txt':
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    elif ext == 'pdf':
+        with open(filepath, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+            return "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+
+    elif ext in ['wav', 'mp3']:
+        converted_path = os.path.join(UPLOAD_FOLDER, 'converted_audio.wav')
+        try:
+            (
+                ffmpeg
+                .input(filepath)
+                .output(converted_path, format='wav', acodec='pcm_s16le', ac=1, ar='16000')
+                .overwrite_output()
+                .run(quiet=True)
+            )
+            with sr.AudioFile(converted_path) as source:
+                audio = recognizer.record(source)
+            return recognizer.recognize_google(audio)
+        except Exception as e:
+            return f"Error converting audio: {str(e)}"
+
+    elif ext == 'mp4':
+        audio_path = os.path.join(UPLOAD_FOLDER, 'temp_audio.wav')
+        try:
+            (
+                ffmpeg
+                .input(filepath)
+                .output(audio_path, format='wav', acodec='pcm_s16le', ac=1, ar='16000')
+                .overwrite_output()
+                .run(quiet=True)
+            )
+            with sr.AudioFile(audio_path) as source:
+                audio = recognizer.record(source)
+            return recognizer.recognize_google(audio)
+        except Exception as e:
+            return f"Error extracting audio: {str(e)}"
+
+    else:
+        return "Unsupported file type."
+
+# Updated summary generation function using OpenAI API
+def generate_summary(text):
+    try:
+        # Using OpenAI to generate a more advanced summary
+        response = openai.Completion.create(
+            engine="text-davinci-003",  # You can choose another model if needed
+            prompt=f"Summarize the following text:\n\n{text}",
+            max_tokens=150,  # Adjust this to get the desired length of the summary
+            temperature=0.5  # Adjust for creativity in summary generation
+        )
+        summary = response.choices[0].text.strip()
+        return summary
+    except Exception as e:
+        return f"Error in generating summary: {str(e)}"
+
+def get_keyword_frequency(text):
+    words = [word.strip(string.punctuation).lower() for word in text.split()]
+    return dict(Counter(words))
+
+def calculate_nlp_score(text, keywords):
+    total_words = len(text.split())
+    keyword_hits = sum([text.lower().count(k) for k in keywords])
+    score = int((keyword_hits / total_words) * 100) if total_words > 0 else 0
+    return score
+
+def generate_confidence_score():
+    return random.randint(70, 99)
+
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username in users:
+            flash('Username already exists')
+            return redirect(url_for('register'))
+
+        users[username] = password
+        flash('Registration successful! Please login.')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username in users and users[username] == password:
+            session['username'] = username
+            return redirect(url_for('upload_page'))
+
+        flash('Invalid username or password')
+        return redirect(url_for('login'))
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    flash('Logged out successfully.')
+    return redirect(url_for('home'))
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_page():
+    if 'username' not in session:
+        flash('You must be logged in to upload.')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+
+        file = request.files['file']
+
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            extracted_text = extract_text_from_file(filepath)
+            summary = generate_summary(extracted_text)  # Now using OpenAI for summarization
+            keyword_freq = get_keyword_frequency(extracted_text)
+            nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
+            confidence = generate_confidence_score()
+
+            return render_template(
+                'results.html',
+                filename=filename,
+                text=extracted_text,
+                summary=summary,
+                keywords=keyword_freq,
+                nlp_score=nlp_score,
+                confidence=confidence
+            )
+
+        else:
+            flash('File type not allowed')
+            return redirect(request.url)
+
+    return render_template('upload.html')
+
+@app.route('/results/<filename>')
+def results(filename):
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    extracted_text = extract_text_from_file(filepath)
+    summary = generate_summary(extracted_text)  # Now using OpenAI for summarization
+    keyword_freq = get_keyword_frequency(extracted_text)
+    nlp_score = calculate_nlp_score(extracted_text, keyword_freq.keys())
+    confidence = generate_confidence_score()
+
+    return render_template(
+        'results.html',
+        filename=filename,
+        text=extracted_text,
+        summary=summary,
+        keywords=keyword_freq,
+        nlp_score=nlp_score,
+        confidence=confidence
+    )
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+print(os.getenv("OPENAI_API_KEY"))

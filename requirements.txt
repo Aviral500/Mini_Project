@@ -1,0 +1,6 @@
+flask
+werkzeug
+PyPDF2
+SpeechRecognition
+moviepy
+ffmpeg-python

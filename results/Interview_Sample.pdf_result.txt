@@ -1,0 +1,17 @@
+Filename: Interview_Sample.pdf
+
+Summary:
+In...
+
+Keywords:
+interview, candidate, python, strengths, problem
+
+Full Text:
+Interview Transcript - Candidate: John Doe
+Q: Tell me about yourself.
+A: I am a computer science graduate with experience in Python, AI, and data analysis.
+Q: What are your strengths?
+A: My strengths include problem-solving, communication, and teamwork.
+Q: Why do you want to work in this company?
+A: Because it allows me to grow in the AI domain and contribute meaningfully.
+Keywords: AI, Python, Communication, Problem-solving, Teamwork, Interview, Candidate
